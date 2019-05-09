@@ -70,6 +70,7 @@ int main() {
             double sense_theta = std::stod(j[1]["sense_theta"].get<string>());
 
             pf.init(sense_x, sense_y, sense_theta, sigma_pos);
+            
           } else {
             // Predict the vehicle's next state from previous 
             //   (noiseless control) data.

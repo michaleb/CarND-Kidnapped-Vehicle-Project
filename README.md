@@ -1,3 +1,205 @@
+## Kidnapped Vehicle (Sparse Localization)
+
+
+[//]: # (Image References)
+
+[image1]: ./IMG/PF-flow-diagram.png "Particle Filter flow diagram"
+[image2]: ./IMG/Update-step.png "Bayesian Posterior diagram"
+
+
+### Introduction
+
+In this project I implemented a 2 dimensional particle filter in C++ which was used to localize a vehicle that traversed a mapped space. The particle filter, at initialization, was given a map and some localization information (analogous to what a GPS would provide) and there after at each time step received sensor data observed from surrounding landmarks and control data such as pose, yaw rate etc.. of the vehicle.
+
+### Overview
+
+![alt text][image1]
+
+#### Initialization
+
+At the initialization step the car's position is estimated using data from GPS. The subsequent steps in the process will refine this estimate to localize the vehicle. The particle filter was intialized by sampling from a Gaussian distribution, that took into account Gaussian sensor noise, around the initial GPS position and heading estimates.
+
+```cpp
+
+      ...
+
+       // random noise distributions with zero mean and std of respective variables
+  	  std::default_random_engine gen;
+  	  std::normal_distribution<double> dist_x(0, std[0]);
+  	  std::normal_distribution<double> dist_y(0, std[1]);
+  	  std::normal_distribution<double> dist_theta(0, std[2]);  
+
+  	  num_particles = 70;  // Set the number of particles
+  	  Particle particle;
+  	    
+  	  for (unsigned int i=0; i< num_particles; i++) {
+
+  	    particle.id = i+1;
+  	    particle.x = x + dist_x(gen);
+  	    particle.y = y + dist_y(gen);
+  	    particle.theta = theta + dist_theta(gen);
+  	    particle.weight = 1;
+  	    
+	    ...
+
+```  
+
+#### Prediction
+
+During the prediction step control input (yaw rate & velocity) is used to update all particles. Using the bicycle motion model this data is used to predict the position of the particles in the next time step. Due to sensor uncertainty Gaussian noise is added to both the yaw and displacement of each particle.
+
+
+
+```cpp
+	    
+      ...
+
+	    if (yaw_rate == 0) { 
+	      particles[i].x += cos(particles[i].theta) * velocity * delta_t;
+	      particles[i].y += sin(particles[i].theta) * velocity * delta_t;
+	    }
+	    
+	    else { // x,y displacement update for non zero yaw rate
+	      particles[i].x += velocity/yaw_rate * (sin(particles[i].theta + yaw_rate * delta_t) - sin(particles[i].theta));
+	      particles[i].y += velocity/yaw_rate * (cos(particles[i].theta) - cos(particles[i].theta + yaw_rate * delta_t));
+	    }
+	    particles[i].theta += yaw_rate * delta_t;
+
+	    
+	    // adding Gaussian noise to updated displacement and heading
+	    particles[i].x += dist_px(gen);
+	    particles[i].y += dist_py(gen);
+	    particles[i].theta += dist_ptheta(gen);
+
+      ...
+      
+```  
+
+#### Update
+
+During the update step, the particle weights are updated using map landmark positions and feature measurements. Based on the range of the sensor only landmarks within this distance from each particle are considered. 
+
+I found that using the differences between the landmark x, y positions and that of the particles was sufficent to capture relative proximity and resulted in less computational overhead than to calculate the euclidean distances for all in-range landmarks for every particle. This provided a significant improvement in the execution efficiency of the particle filter.
+
+```cpp
+      
+      ...
+
+      // create vector to store landmarks within range of sensor of each particle (predicted state)
+      vector <LandmarkObs> in_range;
+
+      for (unsigned int j=0; j < map_landmarks.landmark_list.size(); j++) {
+        
+        int landmark_id = map_landmarks.landmark_list[j].id_i;
+        float landmark_x = map_landmarks.landmark_list[j].x_f;
+        float landmark_y = map_landmarks.landmark_list[j].y_f;
+
+        // checking for landmark x,y coordinates within sensor range of each predicted state
+        if (fabs(landmark_x - particles[i].x) <= sensor_range &&
+           fabs(landmark_y - particles[i].y) <= sensor_range) {
+           
+      ...
+
+```
+
+ Prior to associating the landmarks observed from the car's perspective to the landmarks within the sensors range their coordinates are transformed to the map's point-of-view.
+
+```cpp
+
+   	    ...
+
+        // transform car observation x coordinate to map x coordinate    
+        double t_obs_x = particles[i].x + cos(particles[i].theta) * observations[k].x - sin(particles[i].theta) * observations[k].y;
+
+        // transform car observation x coordinate to map y coordinate    
+        double t_obs_y = particles[i].y + sin(particles[i].theta) * observations[k].x + cos(particles[i].theta) * observations[k].y;
+
+        ...
+```
+
+The association of predicted (in-range) values with observation values is determined by calculating the sum of the absolute difference between their x and y values for each particle. Once again this proved to be sufficient for the association task but much less computationally intensive than calculating the euclidean distances.
+
+```cpp
+
+          ...
+
+          double shortest_dist = std::numeric_limits<double>::infinity();
+
+          for (unsigned int j=0; j < predicted.size(); j++) {
+            double diff_dist = fabs(predicted[j].x - observations[i].x) + fabs(predicted[j].y - observations[i].y);
+            
+            if (diff_dist < shortest_dist) {
+              shortest_dist = diff_dist;
+            //Assigning the landmark id to the "observation" closest to each in-range landmark 
+              observations[i].id = predicted[j].id; 
+          ...        
+
+```
+
+Once the closest landmark is determined for each particle its weight is updated using the Multi-variate Gaussian function. The weight assigned to the particle is inversely proportional to the distance between oberved and predicted landmark. 
+
+```cpp
+
+        ...
+
+        // re-initialize before calculating weights of new predicted state
+        particles[i].weight = 1.0;
+        
+        for (unsigned int k=0; k < observations.size(); k++) {
+          for (unsigned int j=0; j < in_range.size(); j++) {
+            
+            //obtaining closest landmark/measurement coordinates for each predicted state using matching IDs
+            if (transformed_obs[k].id == in_range[j].id) { 
+              // calculate normalization term
+              double gauss_norm = 1 / (2 * M_PI * std_landmark[0] * std_landmark[1]);
+
+              // calculate exponent
+              double exponent = (pow(transformed_obs[k].x - in_range[j].x, 2) / (2 * pow(std_landmark[0], 2)))
+                           + (pow(transformed_obs[k].y - in_range[j].y, 2) / (2 * pow(std_landmark[1], 2)));
+                
+              // calculate weight using normalization terms and exponent
+              particles[i].weight *= gauss_norm * exp(-exponent);
+            }
+          }
+        }
+
+        ...
+
+```
+
+#### Resampling
+
+Resampling is executed M times *(M is range of 0 to length of particle array)* drawing a particle i (i is the particle index) proportional to its weight. See code snippet below.
+
+```cpp
+      ...
+
+      double mw = *max_element(std::begin(weights), std::end(weights)); 
+        std::uniform_real_distribution <double> dist_r(0.0, mw);
+
+        for (int i=0; i < num_particles; ++i) {
+          beta += 2.0 * dist_r(gen);
+          while (beta > weights[index]) {
+            beta -= weights[index];
+            index = (index + 1) % num_particles;
+          }
+          weighted_particles.push_back(particles[index]);
+        }
+        particles = weighted_particles;
+
+        ...
+
+```  
+
+![alt text][image2]
+
+Once resampled the new particle set is returned. The new set of particles represents the Bayes filter posterior probability. This results in a refined estimate of the vehicle's position based on input evidence.
+
+
+
+
+## Udacity's original README
+
 # Overview
 This repository contains all the code needed to complete the final project for the Localization course in Udacity's Self-Driving Car Nanodegree.
 
