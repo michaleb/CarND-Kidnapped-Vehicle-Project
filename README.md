@@ -9,7 +9,7 @@
 
 ### Introduction
 
-In this project I implemented a 2 dimensional particle filter in C++ which was used to localize a vehicle, in real-time, as it traversed a mapped space. The particle filter, at initialization, was given a map and some localization information (analogous to what a GPS would provide) and there after at each time step received sensor data observed from surrounding landmarks and control data such as pose, yaw rate etc.. of the vehicle.
+In this project I implemented a 2-D particle filter in C++ which was used to localize a vehicle, in real-time, as it traversed a mapped space. The particle filter, at initialization, was given a map and some localization information (analogous to what a GPS would provide) and there after at each time step received sensor data observed from surrounding landmarks and control data such as pose, yaw rate etc.. of the vehicle.
 
 ### Overview
 
