@@ -9,7 +9,7 @@
 
 ### Introduction
 
-In this project I implemented a 2 dimensional particle filter in C++ which was used to localize a vehicle that traversed a mapped space. The particle filter, at initialization, was given a map and some localization information (analogous to what a GPS would provide) and there after at each time step received sensor data observed from surrounding landmarks and control data such as pose, yaw rate etc.. of the vehicle.
+In this project I implemented a 2 dimensional particle filter in C++ which was used to localize a vehicle, in real-time, as it traversed a mapped space. The particle filter, at initialization, was given a map and some localization information (analogous to what a GPS would provide) and there after at each time step received sensor data observed from surrounding landmarks and control data such as pose, yaw rate etc.. of the vehicle.
 
 ### Overview
 
@@ -17,7 +17,7 @@ In this project I implemented a 2 dimensional particle filter in C++ which was u
 
 #### Initialization
 
-At the initialization step the car's position is estimated using data from GPS. The subsequent steps in the process will refine this estimate to localize the vehicle. The particle filter was intialized by sampling from a Gaussian distribution, that took into account Gaussian sensor noise, around the initial GPS position and heading estimates.
+At the initialization step the car's position is estimated using data from GPS. The subsequent steps in the process refined this estimate to localize the vehicle. The particle filter was intialized by sampling from a Gaussian distribution, that took into account Gaussian sensor noise, around the initial GPS position and heading estimates.
 
 ```cpp
 
@@ -46,7 +46,7 @@ At the initialization step the car's position is estimated using data from GPS. 
 
 #### Prediction
 
-During the prediction step control input (yaw rate & velocity) is used to update all particles. Using the bicycle motion model this data is used to predict the position of the particles in the next time step. Due to sensor uncertainty Gaussian noise is added to both the yaw and displacement of each particle.
+During the prediction step control input (yaw rate & velocity) was used to update all particles. Using the bicycle motion model this data was used to predict the position / displacement of the particles in the next time step. Due to sensor uncertainty Gaussian noise is added to both the yaw and displacement of each particle.
 
 
 
@@ -77,9 +77,9 @@ During the prediction step control input (yaw rate & velocity) is used to update
 
 #### Update
 
-During the update step, the particle weights are updated using map landmark positions and feature measurements. Based on the range of the sensor only landmarks within this distance from each particle are considered. 
+During the update step, the particle weights are updated using map landmark positions and feature measurements. Based on the range of the sensors only landmarks within this distance from each particle are considered. 
 
-I found that using the differences between the landmark x, y positions and that of the particles was sufficent to capture relative proximity and resulted in less computational overhead than to calculate the euclidean distances for all in-range landmarks for every particle. This provided a significant improvement in the execution efficiency of the particle filter.
+I found that using the differences between the landmark x, y positions and that of the particles were sufficent to capture relative proximity and resulted in less computational overhead than to calculate the euclidean distances for all in-range landmarks for every particle. This provided a significant improvement in the execution efficiency of the particle filter.
 
 ```cpp
       
@@ -102,7 +102,7 @@ I found that using the differences between the landmark x, y positions and that 
 
 ```
 
- Prior to associating the landmarks observed from the car's perspective to the landmarks within the sensors range their coordinates are transformed to the map's point-of-view.
+ Prior to associating the landmarks observed from the car's perspective to the landmarks within the sensors range their coordinates were transformed to the map's point-of-view.
 
 ```cpp
 
@@ -117,7 +117,7 @@ I found that using the differences between the landmark x, y positions and that 
         ...
 ```
 
-The association of predicted (in-range) values with observation values is determined by calculating the sum of the absolute difference between their x and y values for each particle. Once again this proved to be sufficient for the association task but much less computationally intensive than calculating the euclidean distances.
+The association of predicted (in-range) values with observation values was determined by calculating the sum of the absolute difference between their x and y values for each particle. Once again this proved to be sufficient for the association task and much less computationally intensive than calculating the euclidean distances.
 
 ```cpp
 
@@ -136,7 +136,7 @@ The association of predicted (in-range) values with observation values is determ
 
 ```
 
-Once the closest landmark is determined for each particle its weight is updated using the Multi-variate Gaussian function. The weight assigned to the particle is inversely proportional to the distance between oberved and predicted landmark. 
+Once the closest landmark was determined for each particle its weight was updated using the multi-variate Gaussian distribution. The weights assigned to the particle are inversely proportional to the distance between the oberved and closest predicted landmark. 
 
 ```cpp
 
