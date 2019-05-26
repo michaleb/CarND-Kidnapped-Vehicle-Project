@@ -136,7 +136,7 @@ The association of predicted (in-range) values with observation values was deter
 
 ```
 
-Once the closest landmark was determined for each particle its weight was updated using the multi-variate Gaussian distribution. The weights assigned to the particle are inversely proportional to the distance between the observed and closest predicted landmark. 
+Once the closest landmark to each particle is determined the particle's weight was updated using the multi-variate Gaussian distribution. The weights assigned to the particle are inversely proportional to the distance between the observed and closest predicted (in-range) landmark. 
 
 ```cpp
 
