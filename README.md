@@ -197,7 +197,7 @@ Resampling is executed M times *(M is range of 0 to length of particle array)* d
 
 ```  
 
-Once resampled the new particle set is returned.
+Once resampled the new particle set with updated weights is returned. Here's a [link to my video result](/IMG/Sparse-Localization.mp4)
 
 
 
